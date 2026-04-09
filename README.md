@@ -19,3 +19,39 @@ The pipeline covers everything from raw EEG data processing, model training, ONN
 | Classes | Rest, Left Hand, Right Hand |
 | Model | EEGNet |
 | Test Accuracy | 54.21% (on unseen subjects) |
+
+## Pipeline Overview
+
+```
+Raw EEG Data (PhysioNet .edf files)
+        ↓
+Preprocessing (MNE, Bandpass Filter, StandardScaler)
+        ↓
+Model Training (EEGNet, PyTorch, Kaggle T4 GPU)
+        ↓
+ONNX Export → Serialized to .sentis
+        ↓
+Unity Inference Engine (Inference Engine 2.2.2)
+        ↓
+Real-time Object Control (Rotate Left / Right / Rest)
+```
+
+## Repository Structure
+
+```
+BCI-Motor-Imagery-Real-time-Unity-Control/
+    notebooks/
+        EEG.ipynb              # Attempt 1 — Data checkpoint
+        EEG_ver0.ipynb         # Attempt 2 — Logistic Regression, Random Forest, SVM
+        EEG_ver1.ipynb         # Attempt 3 — Adjusted data conversion
+        eegonkaggle.ipynb      # Attempt 4 — EEGNet introduction
+        final-model.ipynb      # Attempt 5 — Final EEGNet configuration
+    unity/
+        EEGMODEL.cs            # Model inference script
+        EEGStreamer.cs         # CSV streaming script
+        RotateObject.cs        # Object movement script
+    models/
+        eegnet_embedded.onnx   # Exported model
+    README.md
+    JOURNEY.md
+```
