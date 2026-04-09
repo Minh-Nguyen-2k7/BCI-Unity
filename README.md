@@ -46,6 +46,10 @@ BCI-Motor-Imagery-Real-time-Unity-Control/
         EEG_ver1.ipynb         # Attempt 3 — Adjusted data conversion
         eegonkaggle.ipynb      # Attempt 4 — EEGNet introduction
         final-model.ipynb      # Attempt 5 — Final EEGNet configuration
+    preprocessing/
+        epoching.py            # Downloads PhysioNet data via MNE, creates per-subject epochs
+        combining_SC.py        # Combines subjects, applies StandardScaler, splits train/test
+        combining_EA.py        # Experimental — Euclidean Alignment approach (abandoned)
     unity/
         EEGMODEL.cs            # Model inference script
         EEGStreamer.cs         # CSV streaming script
@@ -55,3 +59,47 @@ BCI-Motor-Imagery-Real-time-Unity-Control/
     README.md
     JOURNEY.md
 ```
+
+## Requirements
+
+### Python / Kaggle
+- Python 3.12
+- PyTorch
+- MNE
+- NumPy
+- scikit-learn
+- ONNX
+- ONNX Runtime
+
+### Unity
+- Unity 6.3 LTS (6000.3.1f1)
+- Unity Inference Engine 2.2.2
+
+Install Inference Engine by adding this to `Packages/manifest.json`:
+```json
+"com.unity.sentis": "2.1.1"
+```
+This will install as **Inference Engine 2.2.2** — the invalid signature warning that appears is safe to ignore.
+
+## How to Replicate
+
+### 1. Data & Preprocessing
+- Run `preprocessing/epoching.py` to download PhysioNet data via MNE and create per-subject epoch files
+- Run `preprocessing/combining_SC.py` to combine all subjects, apply StandardScaler normalization, and generate final train/test `.npy` files
+- Note: `preprocessing/combining_EA.py` is an experimental Euclidean Alignment approach that was tested but abandoned due to accuracy drops
+
+### 2. Model Training
+- Upload the generated `.npy` files to Kaggle as a dataset
+- Run `notebooks/final-model.ipynb` on Kaggle using a T4 GPU
+- Export the trained model to ONNX and serialize to `.sentis` (see `JOURNEY.md` for full export notes)
+
+### 3. Unity Setup
+- Open a new Unity 6.3 LTS project
+- Install Inference Engine via `manifest.json`
+- Add the three C# scripts from `unity/` to your scene
+- Place `eegnet_embedded.sentis` and `eeg_test_stream.csv` in `StreamingAssets/`
+- Assign script references in the Inspector
+
+### 4. Running
+- Press Play in Unity
+- The cube will rotate based on EEG predictions from the CSV stream
