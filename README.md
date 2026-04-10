@@ -29,7 +29,7 @@ Preprocessing (MNE, Bandpass Filter, StandardScaler)
         ↓
 Model Training (EEGNet, PyTorch, Kaggle T4 GPU)
         ↓
-ONNX Export → Serialized to .sentis
+ONNX Export → Embedded → Serialized to .sentis
         ↓
 Unity Inference Engine (Inference Engine 2.2.2)
         ↓
@@ -45,17 +45,18 @@ BCI-Motor-Imagery-Real-time-Unity-Control/
         EEG_ver0.ipynb         # Attempt 2 — Logistic Regression, Random Forest, SVM
         EEG_ver1.ipynb         # Attempt 3 — Adjusted data conversion
         eegonkaggle.ipynb      # Attempt 4 — EEGNet introduction
-        final-model.ipynb      # Attempt 5 — Final EEGNet configuration
+        final-model.ipynb      # Attempt 5 — Final EEGNet configuration + ONNX export
     preprocessing/
         epoching.py            # Downloads PhysioNet data via MNE, creates per-subject epochs
         combining_SC.py        # Combines subjects, applies StandardScaler, splits train/test
         combining_EA.py        # Experimental — Euclidean Alignment approach (abandoned)
+        generate_csv.py        # Converts test .npy files into Unity-readable CSV format
     unity/
         EEGMODEL.cs            # Model inference script
         EEGStreamer.cs         # CSV streaming script
         RotateObject.cs        # Object movement script
     models/
-        eegnet_embedded.onnx   # Exported model
+        eegnet_embedded.onnx   # Exported model with embedded weights
     README.md
     JOURNEY.md
 ```
@@ -86,20 +87,36 @@ This will install as **Inference Engine 2.2.2** — the invalid signature warnin
 ### 1. Data & Preprocessing
 - Run `preprocessing/epoching.py` to download PhysioNet data via MNE and create per-subject epoch files
 - Run `preprocessing/combining_SC.py` to combine all subjects, apply StandardScaler normalization, and generate final train/test `.npy` files
+- Run `preprocessing/generate_csv.py` to convert the test `.npy` files into `eeg_test_stream.csv` for Unity streaming
 - Note: `preprocessing/combining_EA.py` is an experimental Euclidean Alignment approach that was tested but abandoned due to accuracy drops
 
-### 2. Model Training
+### 2. Model Training & ONNX Export
 - Upload the generated `.npy` files to Kaggle as a dataset
 - Run `notebooks/final-model.ipynb` on Kaggle using a T4 GPU
-- Export the trained model to ONNX and serialize to `.sentis` (see `JOURNEY.md` for full export notes)
+- The notebook will automatically export the model to ONNX and embed the weights
+- Download `eegnet_embedded.onnx` from the Kaggle output
 
-### 3. Unity Setup
+### 3. Preparing the Model for Unity
+- Place `eegnet_embedded.onnx` in your Unity project's `Assets/Models/` folder
+- In Unity's Inspector, click **"Serialize To StreamingAssets"**
+- This generates `eegnet_embedded.sentis` in the `StreamingAssets/` folder
+- Note: Unity Inference Engine cannot load `.onnx` directly — the `.sentis` serialization step is required
+
+### 4. Unity Setup
 - Open a new Unity 6.3 LTS project
 - Install Inference Engine via `manifest.json`
 - Add the three C# scripts from `unity/` to your scene
-- Place `eegnet_embedded.sentis` and `eeg_test_stream.csv` in `StreamingAssets/`
-- Assign script references in the Inspector
+- Place `eeg_test_stream.csv` in `StreamingAssets/`
+- Assign script references in the Inspector:
+  - `EEGStreamer` → assign the GameObject with `EEGMODEL` as Classifier
+  - `RotateObject` → assign the GameObject with `EEGStreamer` as Streamer
 
-### 4. Running
+### 5. Running
 - Press Play in Unity
 - The cube will rotate based on EEG predictions from the CSV stream
+- Console will show epoch predictions and running accuracy
+
+## Known Issues & Notes
+- Unity Inference Engine **must** load the `.sentis` file, not the `.onnx` file directly — loading `.onnx` results in 0MB weight size and incorrect predictions
+- Use `BackendType.CPU` — the `GPUCompute` backend produces incorrect results with depthwise convolutions
+- The `com.unity.sentis` package installs as **Inference Engine 2.2.2** in Unity 6 — this is expected
