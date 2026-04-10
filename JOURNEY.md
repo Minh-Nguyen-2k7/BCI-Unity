@@ -135,6 +135,7 @@ Getting correct inference results in Unity required solving several non-obvious 
 | 30% accuracy in Unity vs 54% in Python | Model weights not loading (0MB) | Serialize `.onnx` to `.sentis` via Unity Inspector |
 | Wrong predictions despite correct data | `GPUCompute` backend bug with depthwise convolutions | Switch to `BackendType.CPU` |
 | Two-file ONNX export | PyTorch dynamo exporter splits weights | Use `onnx.save` with `save_as_external_data=False` |
+| Wrong inference scores (inverted outputs) | BatchNorm folded incorrectly by dynamo exporter at opset 18 | Export with opset 15 — Unity Inference Engine supports opset 7-15 only |
 | Asset import failed after file changes | Unity cached old model | Delete `Library` folder and reopen Unity |
 
 ### Week 8 — Real-Time Object Control
